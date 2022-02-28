@@ -16,58 +16,37 @@ const vpc = new awsx.ec2.Vpc("uniDeployVPC", {
 });
 
 
-// create a new ECR repository
-const repository = new aws.ecr.Repository("uni-demo-continer-repo");
-const repositoryPolicy = new aws.ecr.RepositoryPolicy("basicRepoPolicy", {
-    repository: repository.id,
-    policy: JSON.stringify({
-        Version: "2012-10-17",
-        Statement: [{
-            Sid: "new policy",
-            Effect: "Allow",
-            Principal: "*",
-            Action: [
-                "ecr:GetDownloadUrlForLayer",
-                "ecr:BatchGetImage",
-                "ecr:BatchCheckLayerAvailability",
-                "ecr:PutImage",
-                "ecr:InitiateLayerUpload",
-                "ecr:UploadLayerPart",
-                "ecr:CompleteLayerUpload",
-                "ecr:DescribeRepositories",
-                "ecr:GetRepositoryPolicy",
-                "ecr:ListImages",
-                "ecr:DeleteRepository",
-                "ecr:BatchDeleteImage",
-                "ecr:SetRepositoryPolicy",
-                "ecr:DeleteRepositoryPolicy"
-            ]
-        }]
-    })
+const _default = new aws.ec2.DefaultSecurityGroup("defaultVpcSg", {
+    vpcId: vpc.id,
+    ingress: [{
+        protocol: "tcp",
+        self: true,
+        fromPort: 0,
+        toPort: 0,
+    },
+    {
+        protocol: "udp",
+        self: true,
+        fromPort: 0,
+        toPort: 0,
+    }],
+    egress: [{
+        fromPort: 0,
+        toPort: 0,
+        protocol: "-1",
+        cidrBlocks: ["0.0.0.0/0"],
+    }],
+    tags: {
+        Name: "defaultVpcSg",
+        Env: pulumi.getStack()
+    }
 });
 
-
-const lifecyclePolicy = new aws.ecr.LifecyclePolicy("uni-repo-life-cycle-policy", {
-    repository: repository.id,
-    policy: JSON.stringify({
-        rules: [{
-            rulePriority: 1,
-            description: "Expire images older than 14 days",
-            selection: {
-                tagStatus: "untagged",
-                countType: "sinceImagePushed",
-                countUnit: "days",
-                countNumber: 14
-            },
-            action: { type: "expire" }
-        }]
-    })
-});
 
 
 // exporting the newly created resource definition
 export const vpcId = vpc.id;
 export const vpcPrivateSubnetIds = vpc.privateSubnetIds;
 export const vpcPublicSubnetIds = vpc.publicSubnetIds;
-export const ecrRepo = repository.repositoryUrl;
+export const defaultSecGrpId = _default.id;
 
